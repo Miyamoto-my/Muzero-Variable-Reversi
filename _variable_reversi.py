@@ -20,7 +20,7 @@ class MuZeroConfig:
                                     
         ###  ゲーム
         self.observation_shape = (3, 10, 10)  # ゲーム観察の寸法は、3D (チャンネル、高さ、幅) でなければなりません。 1D 配列の場合は、(1, 1, 配列の長さ) に変形してください
-        self.action_space = list(range(10 * 10))  # すべての可能なアクションの固定リスト。長さだけを編集する必要があります
+        self.action_space = list(range((10 * 10) + 1))  # すべての可能なアクションの固定リスト。長さだけを編集する必要があります
         self.players = list(range(2))   # プレイヤーのリスト。長さだけを編集する必要があります
         self.stacked_observations = 0   # 現在の観測に追加する以前の観測と以前のアクションの数
 
@@ -38,7 +38,7 @@ class MuZeroConfig:
         self.temperature_threshold = None   # visit_softmax_temperature_fn で指定された温度を 0 に下げる (つまり、最適なアクションを選択する) までの移動回数。 None の場合、毎回 visit_softmax_temperature_fn が使用されます
 
         # ルート先行探索ノイズ
-        self.root_dirichlet_alpha = 0.1
+        self.root_dirichlet_alpha = 0.3
         self.root_exploration_fraction = 0.25
 
         # UCBスタイル
@@ -47,25 +47,25 @@ class MuZeroConfig:
 
 
         ### 通信網
-        self.network = "resnet"  # "resnet" / "完全接続"
+        self.network = "resnet"  # "resnet" / "fullyconnected"
         self.support_size = 10  # 値と報酬は (ほぼ sqrt で) スケーリングされ、-support_size から support_size の範囲でベクトルにエンコードされます。 support_size <= sqrt(max(abs(割引報酬))) となるように選択してください
 
         # 残差のネットワーク
         self.downsample = False     # 表現ネットワークの前に観察をダウンサンプリング、False / "CNN" (ライター) / "resnet" (論文の付録ネットワーク アーキテクチャを参照)
         self.blocks = 6             # ResNet 内のブロック数
-        self.channels = 16          # ResNet のチャンネル数
-        self.reduced_channels_reward = 16   # リワードヘッドのチャンネル数
-        self.reduced_channels_value = 16    # バリューヘッドのチャンネル数
-        self.reduced_channels_policy = 16   # ポリシー ヘッドのチャネル数
-        self.resnet_fc_reward_layers = [8]  # 動的ネットワークの報酬ヘッドに隠れ層を定義する
-        self.resnet_fc_value_layers = [8]   # 予測ネットワークの値の頭に隠れ層を定義します
-        self.resnet_fc_policy_layers = [8]  # 予測ネットワークのポリシー ヘッドで隠れ層を定義する
+        self.channels = 128         # ResNet のチャンネル数
+        self.reduced_channels_reward = 2    # リワードヘッドのチャンネル数
+        self.reduced_channels_value = 2     # バリューヘッドのチャンネル数
+        self.reduced_channels_policy = 4    # ポリシー ヘッドのチャネル数
+        self.resnet_fc_reward_layers = [64] # 動的ネットワークの報酬ヘッドに隠れ層を定義する
+        self.resnet_fc_value_layers = [64]  # 予測ネットワークの値の頭に隠れ層を定義します
+        self.resnet_fc_policy_layers = [64] # 予測ネットワークのポリシー ヘッドで隠れ層を定義する
 
         # 完全に接続されたbulbネットワーク
         self.encoding_size = 32
         self.fc_representation_layers = []  # 表現ネットワークで隠れ層を定義する
-        self.fc_dynamics_layers = [16]      # ダイナミクス ネットワークの隠れ層を定義する
-        self.fc_reward_layers = [16]        # 報酬ネットワークの隠れ層を定義する
+        self.fc_dynamics_layers = [64]      # ダイナミクス ネットワークの隠れ層を定義する
+        self.fc_reward_layers = [64]        # 報酬ネットワークの隠れ層を定義する
         self.fc_value_layers = []           # バリュー ネットワークの隠れ層を定義する
         self.fc_policy_layers = []          # ポリシー ネットワークの隠れ層を定義する
 
@@ -215,12 +215,26 @@ class VariableReversi:
         self.player = 1
         self.board_size_range = [4, 6, 8, 10]
         self.board = self.set_board()
+        self._pass = self.board_size * self.board_size
     
     def set_board(self):
+        """
+        盤面を生成する
+        -----
+        戻り値
+            new_board (int array): 盤面
+        """
         def get_board_size():
+            """
+            可変式盤面の幅を生成する
+            -----
+            戻り値
+                (int): 4、6、8、10、の何れかをランダムで返す
+            """
             return random.choice(self.board_size_range)
         
         def set_center_koma(active_board):
+            """ 盤面の中央4マスに白及び黒を配置する """
             base_x = math.floor(self.height / 2)
             base_y = math.floor(self.width / 2)
 
@@ -253,7 +267,7 @@ class VariableReversi:
         return self.get_observation()
     
     def step(self, action):
-        if 0 <= action:
+        if action != self._pass:
             y = math.floor(action / self.board_size)
             x = action % self.board_size
             reverse = self.is_legal_action_xy(y, x)[1]
@@ -278,8 +292,8 @@ class VariableReversi:
         """
         合法手リストを返す
         -----
-        Return
-        legal: 合法手リスト，合法手がない場合は-1を返す
+        戻り値
+            legal (int array): 合法手リスト、合法手がない場合（パスをする場合）は44を返す
         """
         legal = []
         for y in range(0, self.board_size):
@@ -288,18 +302,28 @@ class VariableReversi:
                     legal.append(y * self.board_size + x)
         
         if legal == []:
-            return [-1]
+            return [self._pass]
         return legal
 
     def is_legal_action_xy(self, y, x):
+        """
+        入力値の合法手の有無と裏返す配列を返す
+        -----
+        引数
+            y (int): boardの一次元の要素番号
+            x (int): boardの二次元の要素番号
+        戻り値
+            True or False: 合法手の有無
+            flip (int array): 裏返すリスト
+        """
         search_args_y = [0, 0, -1, 1, -1, 1, -1, 1]
         search_args_x = [-1, 1, 0, 0, -1, -1, 1, 1]
-        legal = []
+        flip = []
 
-        if self.board[y][x] == 0:
+        if self.board[y][x] == 0:   # 入力値が盤面上置くことができるか
             for dy, dx in zip(search_args_y, search_args_x):
-                py, px = y, x   # 現在の探索位置
-                search_array = []
+                py, px = y, x       # 現在の探索位置
+                reverse_list = []   # 裏返す
                 while True:
                     py, px = py+dy, px+dx
                     if (py < 0) or (self.board_size-1 < py) or (px < 0) or (self.board_size-1 < px):
@@ -308,24 +332,31 @@ class VariableReversi:
                     if (p_state == 0) or (p_state == 999):
                         break
                     elif (p_state == self.player):
-                        if search_array == []:
+                        if reverse_list == []:
                             break
                         else:
-                            legal.extend(search_array)
+                            flip.extend(reverse_list)
                             break
                     else:
-                        search_array.append(py * self.board_size + px)
+                        reverse_list.append(py * self.board_size + px)
 
-        if legal != []:
-            return True, legal
+        if flip != []:
+            return True, flip
         return False, []
 
     def is_finished(self):
+        """
+        終了条件
+        二回連続合法手がない場合終了する
+        -----
+        戻り値
+            True or False: 終了/続く
+        """
         legal_action = []
         for _ in range(2):
             legal_action.extend(self.legal_actions())
             self.player *= -1
-        if sum(legal_action) == -2:
+        if legal_action[0] == self._pass and legal_action[1] == self._pass:
             return True
         return False
 
@@ -351,6 +382,13 @@ class VariableReversi:
             print()
 
     def human_input_to_action(self):
+        """
+        人が行動選択を行う
+        -----
+        戻り値
+            True or False: 入力値の正否
+            action (int): 行動値、パスの場合は44を返す 
+        """
         human_input = input("Enter an action. [yx] :")
         if (
             len(human_input) == 2
@@ -361,11 +399,15 @@ class VariableReversi:
             x = int(human_input[1]) + math.floor((self.board_size - self.width) / 2)
             if self.is_legal_action_xy(y, x)[0]:
                 return True, y*self.board_size+x
-        if sum(self.legal_actions()) == -1:
-            return True, -1
+
+        if sum(self.legal_actions()) == self._pass: # 入力値が不適切だった場合は、合法手の探索を行いパスの判定を行う
+            return True, self._pass
         return False, -1
 
     def action_to_human_input(self, action):
+        if action == self._pass:
+            return "pass"
+            
         y = math.floor(action / self.board_size)
         x = action % self.board_size
         y -= math.floor((self.board_size-self.height)/2)
