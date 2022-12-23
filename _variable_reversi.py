@@ -198,7 +198,17 @@ class Game(AbstractGame):
         while not valid:
             valid, action = self.env.human_input_to_action()
         return action
+    
+    def expert_agent(self):
+        """
+        MuZero がマルチプレイヤー ゲームでの進捗状況を評価するために直面​​する、ハードコーディングされたエージェント。
+        トレーニングには影響しません
 
+        戻り値:
+            現在のゲーム状態で実行する整数としてのアクション
+        """
+        return self.env.expert_action()
+    
     def action_to_string(self, action):
         """
         アクション番号をアクションを表す文字列に変換します。
@@ -293,7 +303,7 @@ class VariableReversi:
         合法手リストを返す
         -----
         戻り値
-            legal (int array): 合法手リスト、合法手がない場合（パスをする場合）は44を返す
+            legal (int array): 合法手リスト、合法手がない場合（パスをする場合）は_passを返す
         """
         legal = []
         for y in range(0, self.board_size):
@@ -387,7 +397,7 @@ class VariableReversi:
         -----
         戻り値
             True or False: 入力値の正否
-            action (int): 行動値、パスの場合は44を返す 
+            action (int): 行動値、パスの場合は_passを返す 
         """
         human_input = input("Enter an action. [yx] :")
         if (
@@ -403,6 +413,9 @@ class VariableReversi:
         if sum(self.legal_actions()) == self._pass: # 入力値が不適切だった場合は、合法手の探索を行いパスの判定を行う
             return True, self._pass
         return False, -1
+
+    def expert_action(self):
+        return numpy.random.choice(self.legal_actions())
 
     def action_to_human_input(self, action):
         if action == self._pass:
