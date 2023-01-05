@@ -220,7 +220,7 @@ class Game(AbstractGame):
         return self.env.action_to_human_input(action)
 
 class VariableReversi:
-    def __init__(self, seed=None):
+    def __init__(self):
         self.board_size = 10
         self.player = 1
         self.board_size_range = [4, 6, 8, 10]
