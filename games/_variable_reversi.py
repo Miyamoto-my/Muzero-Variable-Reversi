@@ -278,6 +278,15 @@ class VariableReversi:
         return self.get_observation()
     
     def step(self, action):
+        """
+        アクションをゲームに適用する
+        ------
+        引数
+            action (int):プレイヤーの行動
+        ------
+        戻り値
+            observation (int array), reward (int), done (True / False)
+        """
         if action != self._pass:
             y = math.floor(action / self.board_size)
             x = action % self.board_size
@@ -294,6 +303,14 @@ class VariableReversi:
         return self.get_observation(), reward, done
 
     def get_observation(self):
+        """
+        observation観測データを返す
+        ------
+        戻り値
+            board_player1 (float array): プレイヤー1視点の盤面, 
+            board_player2 (float array): プレイヤー2視点の盤面, 
+            board_to_play (int array): 現在のプレイヤー番号, 
+        """
         board_player1 = numpy.where(self.board == -1, 0.0, self.board)
         board_cp = numpy.where(self.board == 1, 0.0, self.board)
         board_player2 = numpy.where(board_cp == -1, 1.0, board_cp)
@@ -420,7 +437,16 @@ class VariableReversi:
         return numpy.random.choice(self.legal_actions())
 
     def action_to_human_input(self, action):
-        if action == self._pass:
+        """
+        アクションをユーザー表示文字列に変換する
+        ------
+        引数
+            action (int): プレイヤーの行動
+        ------
+        戻り値
+            (str): 表示文字列
+        """
+        if action == self._pass:    # アクションがパスの場合，文字列"pass"を返す
             return "pass"
             
         y = math.floor(action / self.board_size)
