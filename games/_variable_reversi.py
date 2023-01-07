@@ -245,13 +245,14 @@ class VariableReversi:
         
         def set_center_koma(active_board):
             """ 盤面の中央4マスに白及び黒を配置する """
-            base_x = math.floor(self.height / 2)
-            base_y = math.floor(self.width / 2)
+            base_y = math.floor(self.height / 2)
+            base_x = math.floor(self.width / 2)
 
-            active_board[base_x-1][base_y-1] = 1
-            active_board[base_x][base_y] = 1
-            active_board[base_x-1][base_y] = -1
-            active_board[base_x][base_y-1] = -1
+            active_board[base_y-1][base_x-1] = 1
+            active_board[base_y][base_x] = 1
+            active_board[base_y-1][base_x] = -1
+            active_board[base_y][base_x-1] = -1
+        
 
         self.height = get_board_size()
         self.width = get_board_size()
@@ -293,8 +294,9 @@ class VariableReversi:
         return self.get_observation(), reward, done
 
     def get_observation(self):
-        board_player1 = numpy.where(self.board == 1, 1.0, 0.0)
-        board_player2 = numpy.where(self.board == -1, 1.0, 0.0)
+        board_player1 = numpy.where(self.board == -1, 0.0, self.board)
+        board_cp = numpy.where(self.board == 1, 0.0, self.board)
+        board_player2 = numpy.where(board_cp == -1, 1.0, board_cp)
         board_to_play = numpy.full((self.board_size, self.board_size), self.player, dtype="int32")
         return numpy.array([board_player1, board_player2, board_to_play])
 
