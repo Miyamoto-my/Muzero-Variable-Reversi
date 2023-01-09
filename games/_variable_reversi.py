@@ -30,9 +30,9 @@ class MuZeroConfig:
                                     
 
         ### セルフプレイ
-        self.num_workers = 2                # リプレイ バッファを供給するために自己再生する同時スレッド/ワーカーの数
+        self.num_workers = 1                # リプレイ バッファを供給するために自己再生する同時スレッド/ワーカーの数
         self.selfplay_on_gpu = False
-        self.max_moves = 121                # ゲームが終了していない場合の移動の最大数
+        self.max_moves = 101                # ゲームが終了していない場合の移動の最大数
         self.num_simulations = 400          # 自己シミュレートされた将来の動きの数
         self.discount = 1                   # 報酬の時系列割引
         self.temperature_threshold = None   # visit_softmax_temperature_fn で指定された温度を 0 に下げる (つまり、最適なアクションを選択する) までの移動回数。 None の場合、毎回 visit_softmax_temperature_fn が使用されます
@@ -63,11 +63,11 @@ class MuZeroConfig:
 
         # 完全に接続されたbulbネットワーク
         self.encoding_size = 32
-        self.fc_representation_layers = []  # 表現ネットワークで隠れ層を定義する
-        self.fc_dynamics_layers = [64]      # ダイナミクス ネットワークの隠れ層を定義する
-        self.fc_reward_layers = [64]        # 報酬ネットワークの隠れ層を定義する
-        self.fc_value_layers = []           # バリュー ネットワークの隠れ層を定義する
-        self.fc_policy_layers = []          # ポリシー ネットワークの隠れ層を定義する
+        self.fc_representation_layers = [16]    # 表現ネットワークで隠れ層を定義する
+        self.fc_dynamics_layers = [64]          # ダイナミクス ネットワークの隠れ層を定義する
+        self.fc_reward_layers = [64]            # 報酬ネットワークの隠れ層を定義する
+        self.fc_value_layers = [16]             # バリュー ネットワークの隠れ層を定義する
+        self.fc_policy_layers = [16]            # ポリシー ネットワークの隠れ層を定義する
 
 
         ### トレーニング
@@ -91,8 +91,8 @@ class MuZeroConfig:
 
         ### Replay Buffer リプレイバッファ
         self.replay_buffer_size = 10000  # リプレイ バッファに保持するセルフプレイ ゲームの数
-        self.num_unroll_steps = 121     # バッチ要素ごとに保持するゲームの動きの数
-        self.td_steps = 121             # 目標値を計算するために考慮する将来のステップ数
+        self.num_unroll_steps = 101     # バッチ要素ごとに保持するゲームの動きの数
+        self.td_steps = 101             # 目標値を計算するために考慮する将来のステップ数
         self.PER = True                 # 優先リプレイ (紙の付録のトレーニングを参照)、ネットワークにとって予期しないリプレイ バッファ内の要素を優先的に選択します。
         self.PER_alpha = 0.5            # どのくらいの優先順位付けが使用されているか、0 は一様なケースに対応し、論文は 1 を示唆しています
 
@@ -251,8 +251,7 @@ class VariableReversi:
             active_board[base_y-1][base_x-1] = 1
             active_board[base_y][base_x] = 1
             active_board[base_y-1][base_x] = -1
-            active_board[base_y][base_x-1] = -1
-        
+            active_board[base_y][base_x-1] = -1        
 
         self.height = get_board_size()
         self.width = get_board_size()
@@ -266,7 +265,6 @@ class VariableReversi:
         w, h = (w1-w2)//2, (h1-h2)//2
         new_board = copy.deepcopy(all_board)
         new_board[w:(-w if w else None), h:(-h if h else None)] = active_board
-
         return new_board
 
     def to_play(self):
@@ -290,7 +288,7 @@ class VariableReversi:
         if action != self._pass:
             y = math.floor(action / self.board_size)
             x = action % self.board_size
-            reverse = self.is_legal_action_xy(y, x)[1]
+            reverse = self.is_legal_action_yx(y, x)[1]
             self.board[y][x] = self.player
             for r in reverse:
                 ry = math.floor(r / self.board_size)
@@ -327,14 +325,14 @@ class VariableReversi:
         legal = []
         for y in range(0, self.board_size):
             for x in range(0, self.board_size):
-                if self.is_legal_action_xy(y, x)[0]:
+                if self.is_legal_action_yx(y, x)[0]:
                     legal.append(y * self.board_size + x)
         
         if legal == []:
             return [self._pass]
         return legal
 
-    def is_legal_action_xy(self, y, x):
+    def is_legal_action_yx(self, y, x):
         """
         入力値の合法手の有無と裏返す配列を返す
         -----
@@ -426,7 +424,7 @@ class VariableReversi:
         ):
             y = int(human_input[0]) + math.floor((self.board_size - self.height) / 2)
             x = int(human_input[1]) + math.floor((self.board_size - self.width) / 2)
-            if self.is_legal_action_xy(y, x)[0]:
+            if self.is_legal_action_yx(y, x)[0]:
                 return True, y*self.board_size+x
 
         if sum(self.legal_actions()) == self._pass: # 入力値が不適切だった場合は、合法手の探索を行いパスの判定を行う
