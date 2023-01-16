@@ -223,6 +223,7 @@ class VariableReversi:
     def __init__(self):
         self.board_size = 10
         self.player = 1
+        self.count = [2, 2]
         self.board_size_range = [4, 6, 8, 10]
         self.board = self.set_board()
         self._pass = self.board_size * self.board_size
@@ -294,6 +295,9 @@ class VariableReversi:
                 ry = math.floor(r / self.board_size)
                 rx = r % self.board_size
                 self.board[ry][rx] = self.player
+                
+            self.count[0] = numpy.count_nonzero(self.board == 1)
+            self.count[1] = numpy.count_nonzero(self.board == -1)
         
         done = self.is_finished()
         reward = 1 if done else 0
@@ -374,7 +378,7 @@ class VariableReversi:
     def is_finished(self):
         """
         終了条件
-        二回連続合法手がない場合終了する
+        二回連続合法手がない且つ勝者の番で終了する
         -----
         戻り値
             True or False: 終了/続く
@@ -383,12 +387,18 @@ class VariableReversi:
         for _ in range(2):
             legal_action.extend(self.legal_actions())
             self.player *= -1
-        if legal_action[0] == self._pass and legal_action[1] == self._pass:
+
+        if (
+            legal_action[0] == self._pass 
+            and legal_action[1] == self._pass 
+            and self.count[self.to_play()] == max(self.count)
+        ):
             return True
         return False
 
     def render(self):
         """ 表示 """
+        print(f"○: {self.count[0]}, ●: {self.count[1]}")
         print("○" if self.player == 1 else "●", "'s Turn")
         marker = "  "
         rs, cs = math.floor((self.board_size-self.height)/2), math.floor((self.board_size-self.width)/2)
